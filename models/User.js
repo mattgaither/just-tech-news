@@ -1,8 +1,14 @@
 const { Model, DataTypes } = require('sequelize');
 const sequelize = require('../config/connection');
+const bcrypt = require('bcrypt');
 
 // Create out user mdoel
-class User extends Model {}
+class User extends Model {
+    // Set up method to run on instance data (per user) to check password
+    checkPassword(loginPw) {
+        return bcrypt.compareSync( loginPw, this.password);
+    };
+};
 
 // Define table columns and configuration
 User.init(
@@ -42,7 +48,7 @@ User.init(
         // Define a password column
         password: {
             type: DataTypes.STRING,
-            allowNull:false,
+            allowNull: false,
             validate: {
                 // This means the password must be at least four characters long
                 len: [4]
@@ -50,6 +56,24 @@ User.init(
         }
     },
     {
+        hooks: {
+            //set up beforeCreate lifecycle "hook" functionality
+            // beforeCreate(userData) {
+            //     return bcrypt.hash(userData.password, 10).then(newUserData => {
+            //         return newUserData
+            //     });
+            // }
+            //Made the above function an async function
+            async beforeCreate(newUserData) {
+                newUserData.password = await bcrypt.hash(newUserData.password, 10);
+                return newUserData
+            },
+            // Set up beforeUpdate lifecycle "hook" functionality
+            async beforeUpdate(updatedUserData) {
+                updatedUserData.password = await bcrypt.hash(updatedUserData.password, 10);
+                return updatedUserData;
+            }
+        },
         // TABLE CONFIGURATION OPYIONS GO HERE (https://sequelize.org/v5/manual/models-definition.html#configuration)
         // Pass in our inported sequelize connection (the direct connection to our database)
         sequelize,
